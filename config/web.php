@@ -95,7 +95,10 @@ $config = [
                 'OPTIONS api/courses' => 'course/options',
                 'POST api/courses/new' => 'course/create-course',
                 'OPTIONS api/courses/new' => 'course/options',
-
+                'GET api/courses/<id>' => 'course/get-course',
+                'OPTIONS api/courses/<id>' => 'course/options',
+                'DELETE api/courses/<id>' => 'course/delete-course',
+                'PATCH api/courses/<id>' => 'course/update-course',
 
                 // element
                 'POST api/courses/<id>/new-element' => 'course/create-element', 

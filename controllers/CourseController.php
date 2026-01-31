@@ -6,8 +6,10 @@ use app\models\Course;
 use app\models\CourseElement;
 use app\models\Role;
 use app\models\User;
+use PHPUnit\Framework\Constraint\Count;
 use yii\filters\auth\HttpBearerAuth;
 use Yii;
+use yii\data\ArrayDataProvider;
 use yii\web\UploadedFile;
 
 class CourseController extends \yii\rest\ActiveController
@@ -77,14 +79,14 @@ class CourseController extends \yii\rest\ActiveController
                 ->where(['is_public' => 1])
                 ->asArray()
                 ->all(),
-             'code' => 200
+            'code' => 200
         ]);
     }
 
     public function actionCreateCourse()
     {
         $model = new Course();
-       $model->load(Yii::$app->request->post(), '');
+        $model->load(Yii::$app->request->post(), '');
         $model->owner_id = Yii::$app->user->id;
         if ($model->validate()) {
 
@@ -104,7 +106,104 @@ class CourseController extends \yii\rest\ActiveController
                 'code' => 422
             ]);
         }
-    } 
+    }
+    public function actionUpdateCourse($id)
+    {
+        $model = Course::findOne($id);
+
+        if (!$model) {
+            Yii::$app->response->statusCode = 404;
+           return '';
+           
+        }
+
+        if ($model->owner_id !== Yii::$app->user->id) {
+            Yii::$app->response->statusCode = 403;
+           return '';
+        }
+
+        $model->load(Yii::$app->request->post(), '');
+
+        if ($model->validate()) {
+            $model->save(false);
+
+            Yii::$app->response->statusCode = 200;
+            return $this->asJson([
+                'message' => 'Course updated',
+                'code' => 200
+            ]);
+        } else {
+            Yii::$app->response->statusCode = 422;
+            return $this->asJson([
+                'data' => [
+                    'errors' => $model->errors
+                ],
+                'code' => 422
+            ]);
+        }
+    }
+
+    // public function actionGetCourses($page)
+    // {
+    //     $array = Course::find()
+    //             ->select(['*'])
+    //             ->asArray()
+    //             ->all();
+    //     $dataProvider = new ArrayDataProvider([
+    //         'all_models' => $array,
+    //         'paginaion' => [
+    //             'page'=> $page,
+    //             'pageSize' => 3
+    //         ]
+    //     ]);
+    //     return $this->asJson([
+    //         'data' => [
+    //             'courses' => $dataProvider->getModels(),
+    //             'page' => $page,
+    //             'total_count' => $dataProvider->getTotalCount()
+    //         ],
+    //         'code' => 200
+    //     ]);
+
+    // }
+
+    public function actionGetCourse($id)
+    {
+        $course = Course::findOne($id);
+        if ($course) {
+            return $this->asJson([
+                'data' => [
+                    'course' => [
+                        'id' => $course->id,
+                        'title' => $course->title,
+                        'description' => $course->description,
+                        'structure' => $course->structure,
+                    ],
+                    'coursesElement' => CourseElement::find()
+                        ->select(['*'])
+                        ->where(['course_id' => $id])
+                        ->asArray()
+                        ->all()
+                ]
+            ]);
+        } else {
+            Yii::$app->response->statusCode = 404;
+            return '';
+        }
+    }
+
+    public function actionDeleteCourse($id)
+    {
+        $course = Course::findOne($id);
+        if ($course) {
+            $course->delete();
+            Yii::$app->response->statusCode = 204;
+            return '';
+        } else {
+            Yii::$app->response->statusCode = 404;
+            return '';
+        }
+    }
     //при запросе отденльные поля а при ответе// 
     public function actionCreateElement($id)
     {

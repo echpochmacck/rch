@@ -14,6 +14,7 @@ use Yii;
  * @property int $owner_id
  * @property string $created_at
  * @property string $updated_at
+ * @property string $structure
  *
  * @property CourseAccess[] $courseAccesses
  * @property CourseElement[] $courseElements
@@ -45,7 +46,7 @@ class Course extends \yii\db\ActiveRecord
             [['description'], 'string'],
             [[ 'owner_id'], 'integer'],
             ['is_public', 'boolean'],
-            [['created_at', 'updated_at'], 'safe'],
+            [['created_at', 'updated_at', 'structure'], 'safe'],
             [['title'], 'string', 'max' => 255],
             [['owner_id'], 'exist', 'skipOnError' => true, 'targetClass' => User::class, 'targetAttribute' => ['owner_id' => 'id']],
         ];
