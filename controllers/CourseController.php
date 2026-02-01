@@ -113,13 +113,12 @@ class CourseController extends \yii\rest\ActiveController
 
         if (!$model) {
             Yii::$app->response->statusCode = 404;
-           return '';
-           
+            return '';
         }
 
         if ($model->owner_id !== Yii::$app->user->id) {
             Yii::$app->response->statusCode = 403;
-           return '';
+            return '';
         }
 
         $model->load(Yii::$app->request->post(), '');
@@ -239,6 +238,77 @@ class CourseController extends \yii\rest\ActiveController
         } else {
             Yii::$app->response->statusCode = 404;
             return '';
+        }
+    }
+
+    public function actionUpdateElement($id, $element_id)
+    {
+        $course = Course::findOne($id);
+        $model = CourseElement::findOne($element_id);
+        if ($model && $course) {
+            $model->load(Yii::$app->request->post(), '');
+            $file = UploadedFile::getInstanceByName('file');
+            if ($file) {
+                $model->file = $file;
+            }
+            if ($model->validate()) {
+                if ($file) {
+                    $model->file_url = Yii::$app->security->generateRandomString()
+                        . '.' . $file->extension;
+
+                    $file->saveAs('uploads/' . $model->file_url);
+                }
+                $model->save(false);
+                Yii::$app->response->statusCode = 200;
+                $this->broadcastElementUpdate($model);
+
+                return $this->asJson([
+                    'data' => [
+                        'course_element' => [
+                            'id' => $model->id,
+                            'structure' => $model->structure,
+                            'file_url' => $model->file_url
+                                ? Yii::$app->request->hostInfo . "/uploads/" . $model->file_url
+                                : null,
+                        ]
+                    ],
+                    'message' => 'updated'
+                ]);
+            } else {
+                Yii::$app->response->statusCode = 422;
+
+                return $this->asJson([
+                    'data' => [
+                        'errors' => $model->errors
+                    ],
+                    'code' => 422
+                ]);
+            }
+        } else {
+            Yii::$app->response->statusCode = 404;
+            return '';
+        }
+    }
+    protected function broadcastElementUpdate($element)
+    {
+        try {
+            $client = new \WebSocket\Client("ws://127.0.0.1:8080");
+
+            $client->send(json_encode([
+                'type' => 'element.updated',
+                'course_id' => $element->course_id,
+                'data' => [
+                    'id' => $element->id,
+                    'structure' => $element->structure,
+                    'file_url' => $element->file_url
+                        ? Yii::$app->request->hostInfo . "/uploads/" . $element->file_url
+                        : null,
+                ]
+            ])); 
+
+            $client->close();
+        } catch (\Throwable $e) {
+            Yii::error($e->getMessage());
         }
     }
 }

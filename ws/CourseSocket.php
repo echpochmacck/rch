@@ -41,6 +41,11 @@
                     echo "HANDLE course.create\n";
                     $this->handleCreateCourse($from, $data);
                     break;
+                case 'element.updated':
+                    foreach ($this->clients as $client) {
+                        $client->send($msg);
+                    }
+                    break;
             }
         }
         protected function handleCreateCourse(ConnectionInterface $conn, array $data)

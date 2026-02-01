@@ -103,6 +103,8 @@ $config = [
                 // element
                 'POST api/courses/<id>/new-element' => 'course/create-element', 
                 'OPTIONS api/courses/<id>/new-element' => 'course/options', 
+                'PATCH api/courses/<id>/element/<element_id>' => 'course/update-element', 
+                'OPTIONS api/courses/<id>/element/<element_id>' => 'course/options', 
 
             ],
         ]
