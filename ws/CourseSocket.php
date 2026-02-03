@@ -46,6 +46,11 @@
                         $client->send($msg);
                     }
                     break;
+                case 'element.created':
+                    foreach ($this->clients as $client) {
+                        $client->send($msg);
+                    }
+                    break;
             }
         }
         protected function handleCreateCourse(ConnectionInterface $conn, array $data)

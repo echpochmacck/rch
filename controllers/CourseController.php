@@ -217,6 +217,7 @@ class CourseController extends \yii\rest\ActiveController
                 $model->file->saveAs('uploads/' . $model->file_url);
                 $model->save(false);
                 Yii::$app->response->statusCode = 201;
+                $this->broadcastElementCreate($model);
                 return $this->asJson([
                     'data' => [
                         // id
@@ -304,7 +305,29 @@ class CourseController extends \yii\rest\ActiveController
                         ? Yii::$app->request->hostInfo . "/uploads/" . $element->file_url
                         : null,
                 ]
-            ])); 
+            ]));
+
+            $client->close();
+        } catch (\Throwable $e) {
+            Yii::error($e->getMessage());
+        }
+    }
+    protected function broadcastElementCreate($element)
+    {
+        try {
+            $client = new \WebSocket\Client("ws://127.0.0.1:8080");
+
+            $client->send(json_encode([
+                'type' => 'element.created',
+                'course_id' => $element->course_id,
+                'data' => [
+                    'id' => $element->id,
+                    'structure' => $element->structure,
+                    'file_url' => $element->file_url
+                        ? Yii::$app->request->hostInfo . "/uploads/" . $element->file_url
+                        : null,
+                ]
+            ]));
 
             $client->close();
         } catch (\Throwable $e) {
