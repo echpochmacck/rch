@@ -6,6 +6,7 @@ use app\models\Course;
 use app\models\CourseElement;
 use app\models\Role;
 use app\models\User;
+use app\models\UserElementProgress;
 use PHPUnit\Framework\Constraint\Count;
 use yii\filters\auth\HttpBearerAuth;
 use Yii;
@@ -83,6 +84,9 @@ class CourseController extends \yii\rest\ActiveController
         ]);
     }
 
+
+    // удалить рекуаред для ис_паблик
+
     public function actionCreateCourse()
     {
         $model = new Course();
@@ -92,6 +96,7 @@ class CourseController extends \yii\rest\ActiveController
 
             $model->save(false);
             Yii::$app->response->statusCode = 201;
+            $this->broadcastCourseCreated($model->attributes);
             return $this->asJson([
                 'message' => 'Course created',
                 'code' => 201
@@ -203,6 +208,70 @@ class CourseController extends \yii\rest\ActiveController
             return '';
         }
     }
+    public function actionViewedElement($element_id)
+    {
+        $element_id = CourseElement::findOne($element_id);
+        if (!$element_id) {
+            Yii::$app->response->statusCode = 404;
+            return '';
+        }
+        $data = Yii::$app->request->post();
+
+        $model = new UserElementProgress();
+        $model->user_id = Yii::$app->user->id;
+        $model->load(Yii::$app->request->post(), '');
+        if ($model->validate()) {
+            $model->save(false);
+            return $this->asJson([
+                'data' => [
+                    'is_viewed' => $model->is_viewed,
+                    'element_id' => $model->element_id
+                ]
+            ]);
+        } else {
+            Yii::$app->response->statusCode = 422;
+            return $this->asJson([
+                'data' => [
+                    'errors' => $model->errors
+                ],
+                'code' => 422
+            ]);
+        }
+    }
+
+
+    public function actionChangeVisibleCourse($id)
+    {
+        $course = Course::findOne($id);
+        if ($course) {
+            $is_public = Yii::$app->request->post('is_public');
+            $course->is_public = $is_public;
+            if ($course->validate()) {
+                $course->save(false);
+
+                $this->broadcastElementVisible($course->id, $course->is_public);
+                Yii::$app->response->statusCode = 204;
+                return $this->asJson([
+                    'data' => [
+                        'course' => $course->attributes
+                    ]
+                ]);
+            } else {
+                Yii::$app->response->statusCode = 422;
+                return $this->asJson([
+                    'data' => [
+                        'errors' => $course->errors
+                    ],
+                    'code' => 422
+                ]);
+            }
+
+            return '';
+        } else {
+            Yii::$app->response->statusCode = 404;
+            return '';
+        }
+    }
     //при запросе отденльные поля а при ответе// 
     public function actionCreateElement($id)
     {
@@ -211,10 +280,7 @@ class CourseController extends \yii\rest\ActiveController
             $model = new CourseElement();
             $model->load(Yii::$app->request->post(), '');
             $model->course_id = $course->id;
-            $model->file = UploadedFile::getInstanceByName('file');
             if ($model->validate()) {
-                $model->file_url = Yii::$app->security->generateRandomString() . "." . $model->file->extension;
-                $model->file->saveAs('uploads/' . $model->file_url);
                 $model->save(false);
                 Yii::$app->response->statusCode = 201;
                 $this->broadcastElementCreate($model);
@@ -222,7 +288,9 @@ class CourseController extends \yii\rest\ActiveController
                     'data' => [
                         // id
                         'course_element' => [
-                            'structure' => $model->structure,
+                            'x' => $model->x,
+                            'y' => $model->y,
+                            'styles' => $model->styles,
                             'file_url' => Yii::$app->request->hostInfo . "/uploads/" . $model->file_url,
                         ]
                     ]
@@ -290,6 +358,45 @@ class CourseController extends \yii\rest\ActiveController
             return '';
         }
     }
+
+    public function actionDeleteElement($id, $element_id)
+    {
+        $course = Course::findOne($id);
+        $model = CourseElement::findOne($element_id);
+
+        if ($model && $course) {
+
+            // удаляем файл если есть
+            if ($model->file_url) {
+                $filePath = 'uploads/' . $model->file_url;
+
+                if (file_exists($filePath)) {
+                    unlink($filePath);
+                }
+            }
+
+            $deletedId = $model->id;
+            $courseId = $model->course_id;
+
+            $model->delete();
+
+            Yii::$app->response->statusCode = 200;
+
+            // уведомляем клиентов
+            $this->broadcastElementDelete($deletedId, $courseId);
+
+            return $this->asJson([
+                'message' => 'deleted',
+                'data' => [
+                    'element_id' => $deletedId
+                ]
+            ]);
+        } else {
+            Yii::$app->response->statusCode = 404;
+            return '';
+        }
+    }
+
     protected function broadcastElementUpdate($element)
     {
         try {
@@ -327,6 +434,54 @@ class CourseController extends \yii\rest\ActiveController
                         ? Yii::$app->request->hostInfo . "/uploads/" . $element->file_url
                         : null,
                 ]
+            ]));
+
+            $client->close();
+        } catch (\Throwable $e) {
+            Yii::error($e->getMessage());
+        }
+    }
+    protected function broadcastElementDelete($elementId, $courseId)
+    {
+        try {
+            $client = new \WebSocket\Client("ws://127.0.0.1:8080");
+
+            $client->send(json_encode([
+                'type' => 'element.deleted',
+                'course_id' => $courseId,
+                'element_id' => $elementId
+            ]));
+
+            $client->close();
+        } catch (\Throwable $e) {
+            Yii::error($e->getMessage());
+        }
+    }
+    protected function broadcastElementVisible($courseId, $is_public)
+    {
+        try {
+            $client = new \WebSocket\Client("ws://127.0.0.1:8080");
+
+            $client->send(json_encode([
+                'type' => 'course.isPublic',
+                'course_id' => $courseId,
+                'is_public' => $is_public
+            ]));
+
+            $client->close();
+        } catch (\Throwable $e) {
+            Yii::error($e->getMessage());
+        }
+    }
+    protected function broadcastCourseCreated($course)
+    {
+        try {
+            $client = new \WebSocket\Client("ws://127.0.0.1:8080");
+
+            $client->send(json_encode([
+                'type' => 'course.created',
+                'course_id' => $course['id'],
+                'course' => $course
             ]));
 
             $client->close();

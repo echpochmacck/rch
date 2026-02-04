@@ -11,7 +11,10 @@ use Yii;
  * @property int $course_id
  * @property string|null $content_url
  * @property string|null $file_url
- * @property string $structure
+ * @property string $title
+ * @property string|null $styles
+ * @property string|null $x
+ * @property string|null $y
  * @property string $created_at
  * @property string $updated_at
  *
@@ -25,7 +28,6 @@ class CourseElement extends \yii\db\ActiveRecord
 {
 
 
-    public $file;
     /**
      * {@inheritdoc}
      */
@@ -41,11 +43,11 @@ class CourseElement extends \yii\db\ActiveRecord
     {
         return [  
             [['content_url', 'file_url'], 'default', 'value' => null],
-            [['course_id',  'structure'], 'required'],
+            [['course_id'], 'required'],
             [['course_id'], 'integer'],
             [['content_url', 'file_url'], 'string'],
             ['file', 'file', 'skipOnEmpty' => true ],
-            [['structure', 'created_at', 'updated_at'], 'safe'],
+            [['styles', 'created_at', 'updated_at'], 'safe'],
             [['course_id'], 'exist', 'skipOnError' => true, 'targetClass' => Course::class, 'targetAttribute' => ['course_id' => 'id']],
         ];
     }
@@ -62,7 +64,7 @@ class CourseElement extends \yii\db\ActiveRecord
             'content_url' => 'Content Url',
             'file_url' => 'File Url',
             'comment' => 'Comment',
-            'structure' => 'Structure',
+            'styles' => 'styles',
             'is_hidden' => 'Is Hidden',
             'created_at' => 'Created At',
             'updated_at' => 'Updated At',

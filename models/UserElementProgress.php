@@ -37,7 +37,7 @@ class UserElementProgress extends \yii\db\ActiveRecord
             [['viewed_at'], 'default', 'value' => null],
             [['is_viewed'], 'default', 'value' => 0],
             [['user_id', 'element_id'], 'required'],
-            [['user_id', 'element_id', 'is_viewed'], 'integer'],
+            [['user_id', 'element_id'], 'integer'],
             [['viewed_at'], 'safe'],
             [['user_id', 'element_id'], 'unique', 'targetAttribute' => ['user_id', 'element_id']],
             [['element_id'], 'exist', 'skipOnError' => true, 'targetClass' => CourseElement::class, 'targetAttribute' => ['element_id' => 'id']],

@@ -95,16 +95,23 @@ $config = [
                 'OPTIONS api/courses' => 'course/options',
                 'POST api/courses/new' => 'course/create-course',
                 'OPTIONS api/courses/new' => 'course/options',
+                'DELETE api/courses/<id>/change-visibility' => 'course/change-visible-course',
+                'PATCH api/courses/<id>/change-visibility' => 'course/change-visible-course',
                 'GET api/courses/<id>' => 'course/get-course',
                 'OPTIONS api/courses/<id>' => 'course/options',
                 'DELETE api/courses/<id>' => 'course/delete-course',
                 'PATCH api/courses/<id>' => 'course/update-course',
 
+
                 // element
-                'POST api/courses/<id>/new-element' => 'course/create-element', 
-                'OPTIONS api/courses/<id>/new-element' => 'course/options', 
-                'PATCH api/courses/<id>/element/<element_id>' => 'course/update-element', 
-                'OPTIONS api/courses/<id>/element/<element_id>' => 'course/options', 
+                'POST api/courses/<id>/new-element' => 'course/create-element',
+                'OPTIONS api/courses/<id>/new-element' => 'course/options',
+                'PATCH api/courses/<id>/element/<element_id>' => 'course/update-element',
+                'OPTIONS api/courses/<id>/element/<element_id>' => 'course/options',
+                'DELETE api/courses/<id>/element/<element_id>' => 'course/delete-element',
+                'OPTIONS api/courses/<id>/element/<element_id>' => 'course/options',
+                'POST api/courses/<id>/element/<element_id>/viewed' => 'course/viewed-element',
+                'OPTIONS api/courses/<id>/element/<element_id>/viewed' => 'course/options',
 
             ],
         ]
